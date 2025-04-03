@@ -28,14 +28,14 @@ class MainApp extends ConsumerWidget {
   }
 }
 
-class MainScreen extends StatefulWidget {
+class MainScreen extends ConsumerStatefulWidget {
   const MainScreen({super.key});
 
   @override
   MainScreenState createState() => MainScreenState();
 }
 
-class MainScreenState extends State<MainScreen> {
+class MainScreenState extends ConsumerState<MainScreen> {
   int _selectedIndex = 0;
   final PageController _pageController = PageController();
 
@@ -45,6 +45,7 @@ class MainScreenState extends State<MainScreen> {
   ];
 
   void _onItemTapped(int index) {
+    if (index < 0 || index >= _screens.length) return; // Prevent invalid index
     setState(() {
       _selectedIndex = index;
     });
@@ -59,7 +60,24 @@ class MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = ref.watch(themeNotifierProvider); // Use ref.watch to listen to changes
+
+    // Titles for the AppBar based on the selected index
+    final appBarTitles = ['Reminders', 'Settings'];
+
     return Scaffold(
+      appBar: AppBar(
+        title: Text(appBarTitles[_selectedIndex]), // Dynamically set the title
+        centerTitle: true, // Center the title text
+        actions: [
+          IconButton(
+            icon: Icon(themeNotifier.isDarkMode ? Icons.dark_mode : Icons.light_mode),
+            onPressed: () {
+              themeNotifier.toggleTheme(); // Toggle the theme
+            },
+          ),
+        ],
+      ),
       body: PageView(
         controller: _pageController,
         children: _screens,

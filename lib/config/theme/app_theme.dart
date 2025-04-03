@@ -13,6 +13,9 @@ const colorList = <Color>[
 ];
 
 class AppTheme {
+  static ThemeData lightTheme = ThemeData.light();
+  static ThemeData darkTheme = ThemeData.dark();
+
   final int selectedColor;
   final bool isDarkmode;
 

@@ -7,13 +7,14 @@ class SettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDarkmode = ref.watch(themeNotifierProvider).isDarkmode;
+    final isDarkMode = ref.watch(themeNotifierProvider).isDarkMode;
+    String selectedLanguage = 'English'; // Default language
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        centerTitle: true,
-      ),
+      //appBar: AppBar(
+        //title: const Text('Settings'),
+        //centerTitle: true,
+      //),
       body: Center(
         child: ListView(
           padding: const EdgeInsets.all(16.0),
@@ -23,9 +24,9 @@ class SettingsPage extends ConsumerWidget {
               contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
               title: const Text('Dark Mode'),
               trailing: Switch(
-                value: isDarkmode,
+                value: isDarkMode,
                 onChanged: (bool value) {
-                  ref.read(themeNotifierProvider.notifier).toggleDarkmode();
+                  ref.read(themeNotifierProvider.notifier).toggleTheme();
                 },
                 activeColor: Colors.blue, // Customize the active color
                 inactiveThumbColor: Colors.grey, // Customize the inactive thumb color
@@ -37,7 +38,7 @@ class SettingsPage extends ConsumerWidget {
               contentPadding: const EdgeInsets.symmetric(vertical: 8.0), // Adjust the padding
               title: const Text('Change Language'),
               trailing: DropdownButton<String>(
-                value: 'English', // Set default value
+                value: selectedLanguage, // Use the selectedLanguage variable
                 items: const [
                   DropdownMenuItem(
                     value: 'English',
@@ -48,13 +49,15 @@ class SettingsPage extends ConsumerWidget {
                     child: Text('Español'),
                   ),
                   DropdownMenuItem(
-                    value: 'French',
+                    value: 'Japanese',
                     child: Text('日本語'),
                   ),
                 ],
                 onChanged: (String? newValue) {
-                  // Handle language change here
-                  debugPrint('Selected Language: $newValue');
+                  if (newValue != null) {
+                    selectedLanguage = newValue; // Update the selected language
+                    debugPrint('Selected Language: $newValue');
+                  }
                 },
               ),
             ),

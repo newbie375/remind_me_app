@@ -6,9 +6,9 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Center(child: Text('Reminders')),
-      ),
+      //appBar: AppBar(
+        //title: const Center(child: Text('Reminders')),
+      //),
       body: Center(
         // Ensures content is centered in the body
         child: Column(

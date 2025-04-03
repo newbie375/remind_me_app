@@ -5,23 +5,23 @@ class CustomBottomNavigation extends StatelessWidget {
   final Function(int) onTap;
 
   const CustomBottomNavigation({
-    super.key,
     required this.currentIndex,
     required this.onTap,
+    super.key,
   });
 
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
-      currentIndex: currentIndex,  // Set the current index
-      onTap: onTap,  // Use the provided onTap callback
+      currentIndex: currentIndex,
+      onTap: onTap,
       items: const [
         BottomNavigationBarItem(
-          icon: Icon(Icons.home),  // Home icon
+          icon: Icon(Icons.home),
           label: 'Home',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.settings),  // Settings icon
+          icon: Icon(Icons.settings),
           label: 'Settings',
         ),
       ],
