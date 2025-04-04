@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:remind_me_app/infrastructure/datasources/database_helper.dart';
 import 'package:remind_me_app/presentation/providers/theme_provider.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -59,6 +60,21 @@ class SettingsPage extends ConsumerWidget {
                     debugPrint('Selected Language: $newValue');
                   }
                 },
+              ),
+            ),
+            // Button to delete the database
+            ListTile(
+              contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
+              title: const Text('Delete Database'),
+              trailing: ElevatedButton(
+                onPressed: () async {
+                  await DatabaseHelper().deleteDatabaseFile();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Database deleted successfully')),
+                  );
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: const Text('Delete'),
               ),
             ),
           ],

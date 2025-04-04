@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:flutter/foundation.dart'; // Import for debugPrint
 import '../../domain/entities/theme_entity.dart';
 import '../../domain/repositories/theme_repository.dart';
 
@@ -21,6 +22,7 @@ class ThemeRepositoryImpl implements ThemeRepository {
             $_columnIsDarkMode INTEGER
           )
         ''');
+        debugPrint('Database and table $_tableName created');
       },
     );
   }
