@@ -35,6 +35,16 @@ class DatabaseHelper {
           )
         ''');
         debugPrint('Database and table $_tableName created');
+
+        await db.execute('''
+          CREATE TABLE notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            date TEXT,
+            repeat_option TEXT
+          )
+        ''');
+        debugPrint('Table notifications created');
       },
     );
   }
@@ -63,6 +73,25 @@ class DatabaseHelper {
     }
     debugPrint('No theme found, defaulting to light mode');
     return const ThemeEntity(isDarkMode: false); // Default to light mode
+  }
+
+  Future<void> saveNotification(String name, DateTime date, String repeatOption) async {
+    final db = await database;
+    await db.insert(
+      'notifications',
+      {
+        'name': name,
+        'date': date.toIso8601String(),
+        'repeat_option': repeatOption,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    debugPrint('Notification saved: $name on $date with repeat: $repeatOption');
+  }
+
+  Future<List<Map<String, dynamic>>> getNotifications() async {
+    final db = await database;
+    return await db.query('notifications', orderBy: 'date ASC'); // Fetch notifications sorted by date
   }
 
   Future<void> deleteDatabaseFile() async {

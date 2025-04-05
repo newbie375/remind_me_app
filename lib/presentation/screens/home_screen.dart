@@ -1,39 +1,66 @@
 import 'package:flutter/material.dart';
+import 'package:remind_me_app/infrastructure/datasources/database_helper.dart';
+import 'package:remind_me_app/presentation/screens/add_notificatons_screen.dart'; // Import the new screen
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  List<Map<String, dynamic>> _notifications = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotifications(); // Load notifications when the screen initializes
+  }
+
+  Future<void> _loadNotifications() async {
+    final notifications = await DatabaseHelper().getNotifications();
+    setState(() {
+      _notifications = notifications;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      //appBar: AppBar(
-        //title: const Center(child: Text('Reminders')),
-      //),
-      body: Center(
-        // Ensures content is centered in the body
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center, // Centers the text vertically
-          children: [
-            const Padding(
-              padding: EdgeInsets.all(16.0),
+      body: _notifications.isEmpty
+          ? const Center(
               child: Text(
                 'There are no reminders created yet.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 16),
-                softWrap: true,
-                overflow: TextOverflow.visible,
               ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16.0),
+              itemCount: _notifications.length,
+              itemBuilder: (context, index) {
+                final notification = _notifications[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: ListTile(
+                    title: Text(notification['name']),
+                    subtitle: Text(
+                      'Date: ${notification['date']}\nRepeat: ${notification['repeat_option']}',
+                    ),
+                  ),
+                );
+              },
             ),
-          ],
-        ),
-      ),
-      floatingActionButton: const FloatingButton(), // Use the custom FloatingButton
+      floatingActionButton: FloatingButton(onNotificationSaved: _loadNotifications),
     );
   }
 }
 
 class FloatingButton extends StatelessWidget {
-  const FloatingButton({super.key});
+  final VoidCallback onNotificationSaved;
+
+  const FloatingButton({super.key, required this.onNotificationSaved});
 
   @override
   Widget build(BuildContext context) {
@@ -53,9 +80,14 @@ class FloatingButton extends StatelessWidget {
             ),
             const SizedBox(width: 12), // Spacing between text and button
             FloatingActionButton(
-              onPressed: () {
-                // Handle button press
-                debugPrint('Plus button pressed');
+              onPressed: () async {
+                // Navigate to AddNotificationScreen
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const AddNotificationScreen(),
+                  ),
+                );
+                onNotificationSaved(); // Reload notifications after saving
               },
               mini: true, // Smaller FAB to fit better in the card
               child: const Icon(Icons.add),
