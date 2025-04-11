@@ -1,13 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+import 'package:remind_me_app/infrastructure/datasources/database_helper.dart';
+import 'package:remind_me_app/infrastructure/services/alarm_permission_service.dart';
+import 'package:remind_me_app/presentation/screens/notification_permission_screen.dart';
+import 'package:remind_me_app/presentation/screens/home_screen.dart';
+import 'package:remind_me_app/presentation/screens/settings_screen.dart';
 import 'presentation/providers/theme_provider.dart';
-import 'presentation/screens/home_screen.dart';
-import 'presentation/screens/settings_screen.dart';
 import 'presentation/widgets/shared/custom_bottom_navigation.dart';
 
-void main() {
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize timezone package
+  tz.initializeTimeZones();
+  tz.setLocalLocation(tz.getLocation('America/New_York')); // Set your local timezone
+
+  // Initialize local notifications
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+
+  const InitializationSettings initializationSettings =
+      InitializationSettings(android: initializationSettingsAndroid);
+
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
   runApp(
-    ProviderScope(
+    const ProviderScope(
       child: MainApp(),
     ),
   );
@@ -23,8 +47,86 @@ class MainApp extends ConsumerWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: appTheme.getTheme(),
-      home: const MainScreen(),
+      home: const InitialScreen(),
     );
+  }
+}
+
+class InitialScreen extends StatefulWidget {
+  const InitialScreen({super.key});
+
+  @override
+  State<InitialScreen> createState() => _InitialScreenState();
+}
+
+class _InitialScreenState extends State<InitialScreen> {
+  bool _isFirstLaunch = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkFirstLaunch();
+  }
+
+  Future<void> _checkFirstLaunch() async {
+    final isFirstLaunch = await DatabaseHelper().isFirstLaunch();
+    if (isFirstLaunch) {
+      _showPermissionDialog();
+    }
+    setState(() {
+      _isFirstLaunch = false;
+    });
+  }
+
+  void _showPermissionDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false, // Prevent dismissing the dialog by tapping outside
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('Notification Permission'),
+          content: const Text(
+              'This app requires notification permissions to send reminders. Please grant permission.'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(); // Close the dialog
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop(); // Close the dialog
+
+                // Request notification permission
+                final isPermissionGranted =
+                    await AlarmPermissionService().requestExactAlarmPermission();
+
+                if (!isPermissionGranted) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                            'Exact alarm permission is required to schedule notifications.'),
+                      ),
+                    );
+                  }
+                } else {
+                  // Mark first launch as complete
+                  await DatabaseHelper().setFirstLaunch(false);
+                }
+              },
+              child: const Text('Grant Permission'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const MainScreen();
   }
 }
 

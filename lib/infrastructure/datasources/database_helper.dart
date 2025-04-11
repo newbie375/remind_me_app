@@ -11,30 +11,43 @@ class DatabaseHelper {
 
   DatabaseHelper._internal();
 
-  static const String _tableName = 'theme_settings';
-  static const String _columnIsDarkMode = 'isDarkMode';
-
-  Future<Database> get database async {
-    if (_database != null) return _database!;
+  Future<void> initializeDatabase() async {
+    if (_database != null) return; // Ensure this is called only once
     _database = await _initDatabase();
-    return _database!;
   }
 
   Future<Database> _initDatabase() async {
     final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'settings.db');
+    final path = join(dbPath, 'app_settings.db');
+
+    debugPrint('Initializing database at $path');
 
     return await openDatabase(
       path,
       version: 1,
       onCreate: (db, version) async {
+        debugPrint('Creating settings table');
         await db.execute('''
-          CREATE TABLE $_tableName (
+          CREATE TABLE settings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            $_columnIsDarkMode INTEGER
+            key TEXT UNIQUE,
+            value TEXT
           )
         ''');
-        debugPrint('Database and table $_tableName created');
+        await db.insert(
+          'settings',
+          {'key': 'isFirstLaunch', 'value': 'true'},
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+        debugPrint('Default isFirstLaunch value set to true');
+
+        await db.execute('''
+          CREATE TABLE theme_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            isDarkMode INTEGER
+          )
+        ''');
+        debugPrint('Database and table theme_settings created');
 
         await db.execute('''
           CREATE TABLE notifications (
@@ -49,7 +62,15 @@ class DatabaseHelper {
     );
   }
 
-  @override
+  static const String _tableName = 'theme_settings';
+  static const String _columnIsDarkMode = 'isDarkMode';
+
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+    _database = await _initDatabase();
+    return _database!;
+  }
+
   Future<void> saveTheme(ThemeEntity theme) async {
     final db = await database;
     debugPrint('Saving theme: isDarkMode = ${theme.isDarkMode}');
@@ -61,7 +82,6 @@ class DatabaseHelper {
     debugPrint('Theme saved successfully');
   }
 
-  @override
   Future<ThemeEntity> getTheme() async {
     final db = await database;
     final result = await db.query(_tableName, limit: 1);
@@ -96,7 +116,7 @@ class DatabaseHelper {
 
   Future<void> deleteDatabaseFile() async {
     final dbPath = await getDatabasesPath();
-    final path = join(dbPath, 'settings.db');
+    final path = join(dbPath, 'app_settings.db');
 
     try {
       await deleteDatabase(path);
@@ -104,5 +124,32 @@ class DatabaseHelper {
     } catch (e) {
       debugPrint('Error deleting database: $e');
     }
+  }
+
+  Future<void> setFirstLaunch(bool isFirstLaunch) async {
+    final db = await database;
+    debugPrint('Setting isFirstLaunch to $isFirstLaunch');
+    await db.insert(
+      'settings',
+      {'key': 'isFirstLaunch', 'value': isFirstLaunch.toString()},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    debugPrint('isFirstLaunch updated in database');
+  }
+
+  Future<bool> isFirstLaunch() async {
+    final db = await database;
+    final result = await db.query(
+      'settings',
+      where: 'key = ?',
+      whereArgs: ['isFirstLaunch'],
+    );
+
+    debugPrint('isFirstLaunch query result: $result');
+
+    if (result.isNotEmpty) {
+      return result.first['value'] == 'true';
+    }
+    return true; // Default to true if no value is found
   }
 }

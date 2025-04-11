@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:remind_me_app/infrastructure/datasources/database_helper.dart';
+import 'package:remind_me_app/infrastructure/services/alarm_permission_service.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 class AddNotificationScreen extends StatefulWidget {
   const AddNotificationScreen({super.key});
@@ -22,6 +25,9 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
     'Every year',
     'Custom',
   ];
+
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
   @override
   void dispose() {
@@ -57,12 +63,44 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
     }
   }
 
+  Future<void> _scheduleNotification(
+      String name, DateTime dateTime, String repeatOption) async {
+    // Define notification details
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'reminder_channel', // Channel ID
+      'Reminders', // Channel name
+      channelDescription: 'Notification channel for reminders',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+
+    const NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    // Convert DateTime to TZDateTime
+    final tz.TZDateTime tzDateTime = tz.TZDateTime.from(dateTime, tz.local);
+
+    // Schedule the notification
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      0, // Notification ID
+      name, // Notification title
+      'Reminder scheduled for $dateTime', // Notification body
+      tzDateTime, // Schedule time
+      platformChannelSpecifics,
+      matchDateTimeComponents: DateTimeComponents.time, // Correct parameter
+      androidScheduleMode: AndroidScheduleMode.exact, // Correct parameter
+    );
+  }
+
   void _saveNotification() async {
     final String name = _nameController.text.trim();
     if (name.isEmpty || _selectedDate == null || _selectedTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a name, date, and time')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter a name, date, and time')),
+        );
+      }
       return;
     }
 
@@ -74,15 +112,46 @@ class _AddNotificationScreenState extends State<AddNotificationScreen> {
       _selectedTime!.minute,
     );
 
-    // Save the notification to the database
-    await DatabaseHelper().saveNotification(
-      name,
-      notificationDateTime,
-      _selectedRepeatOption,
-    );
+    debugPrint('Saving notification: $name at $notificationDateTime');
 
-    // Navigate back to the previous screen
-    Navigator.of(context).pop();
+    try {
+      // Request exact alarm permission
+      final isPermissionGranted = await AlarmPermissionService().requestExactAlarmPermission();
+
+      if (!isPermissionGranted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Exact alarm permission is required to schedule notifications')),
+          );
+        }
+        return;
+      }
+
+      // Save the notification to the database
+      await DatabaseHelper().saveNotification(
+        name,
+        notificationDateTime,
+        _selectedRepeatOption,
+      );
+      debugPrint('Notification saved to database');
+
+      // Schedule the notification
+      await _scheduleNotification(name, notificationDateTime, _selectedRepeatOption);
+      debugPrint('Notification scheduled');
+
+      // Navigate back to the previous screen
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+      debugPrint('Navigated back to the previous screen');
+    } catch (e) {
+      debugPrint('Error saving notification: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to save notification')),
+        );
+      }
+    }
   }
 
   @override
